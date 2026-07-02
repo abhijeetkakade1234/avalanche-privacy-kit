@@ -1,0 +1,38 @@
+- main [ref=f1e3]:
+  - generic [ref=f1e4]:
+    - paragraph [ref=f1e5]: Avalanche Privacy Kit
+    - heading "Shortest path to an eERC starter on Fuji." [level=1] [ref=f1e6]
+    - paragraph [ref=f1e7]: This starter is wired around the official Ava Labs eERC SDK. Wallet connect works now. The privacy flow becomes live once the contract and proof asset URLs are configured.
+    - generic [ref=f1e8]:
+      - link "Event brief" [ref=f1e9] [cursor=pointer]:
+        - /url: https://build.avax.network/events/b5e9fe35-5b5d-4fac-8709-e8eac8a1eaee
+      - link "Official SDK" [ref=f1e10] [cursor=pointer]:
+        - /url: https://github.com/ava-labs/ac-eerc-sdk
+  - generic [ref=f1e11]:
+    - article [ref=f1e12]:
+      - heading "Wallet" [level=2] [ref=f1e13]
+      - paragraph [ref=f1e14]: "Target chain: Avalanche Fuji (43113)"
+      - paragraph [ref=f1e15]: No wallet connected
+      - button "Connect Injected" [ref=f1e16] [cursor=pointer]
+    - article [ref=f1e17]:
+      - heading "Starter status" [level=2] [ref=f1e18]
+      - paragraph [ref=f1e19]: eERC config present
+      - list [ref=f1e20]:
+        - listitem [ref=f1e21]:
+          - text: "Preset:"
+          - code [ref=f1e22]: standalone
+        - listitem [ref=f1e23]:
+          - text: "Preset label:"
+          - code [ref=f1e24]: Verified Fuji standalone sample
+        - listitem [ref=f1e25]:
+          - text: "Contract:"
+          - code [ref=f1e26]: "0x5E9c6F952fB9615583182e70eDDC4e6E4E0aC0e0"
+        - listitem [ref=f1e27]:
+          - text: "Contract source:"
+          - code [ref=f1e28]: verified Fuji sample default
+        - listitem [ref=f1e29]:
+          - text: "Converter token:"
+          - code [ref=f1e30]: standalone contract or not set
+    - article [ref=f1e31]:
+      - heading "Privacy flow" [level=2] [ref=f1e32]
+      - paragraph [ref=f1e33]: Connect a wallet first.

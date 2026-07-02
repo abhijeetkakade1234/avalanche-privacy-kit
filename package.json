@@ -1,0 +1,11 @@
+{
+  "name": "avalanche-privacy-kit",
+  "private": true,
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "dev": "pnpm --filter @avalanche-privacy-kit/starter dev",
+    "build": "pnpm --filter @avalanche-privacy-kit/starter build",
+    "eerc:assets": "node scripts/fetch-eerc-assets.mjs",
+    "verify:fuji": "pnpm --filter @avalanche-privacy-kit/starter exec node scripts/verify-fuji-demo.mjs"
+  }
+}

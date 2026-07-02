@@ -1,0 +1,8 @@
+packages:
+  - "apps/*"
+allowBuilds:
+  blake-hash: true
+  bufferutil: true
+  esbuild: true
+  keccak: true
+  utf-8-validate: true

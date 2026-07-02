@@ -1,0 +1,44 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - paragraph [ref=e5]: Avalanche Privacy Kit
+    - heading "Shortest path to an eERC starter on Fuji." [level=1] [ref=e6]
+    - paragraph [ref=e7]: This starter is wired around the current official Ava Labs eERC SDK. Wallet connect works now. The app defaults to a verified Fuji sample deployment and uses locally staged official circuit assets.
+    - generic [ref=e8]:
+      - link "Event brief" [ref=e9] [cursor=pointer]:
+        - /url: https://build.avax.network/events/b5e9fe35-5b5d-4fac-8709-e8eac8a1eaee
+      - link "Official SDK" [ref=e10] [cursor=pointer]:
+        - /url: https://github.com/ava-labs/eerc-sdk
+  - generic [ref=e11]:
+    - article [ref=e12]:
+      - heading "Wallet" [level=2] [ref=e13]
+      - paragraph [ref=e14]: "Target chain: Avalanche Fuji (43113)"
+      - paragraph [ref=e15]: No wallet connected
+      - button "Connect Injected" [ref=e16] [cursor=pointer]
+    - article [ref=e17]:
+      - heading "Starter status" [level=2] [ref=e18]
+      - paragraph [ref=e19]: eERC config present
+      - generic [ref=e20]:
+        - button "standalone" [ref=e21] [cursor=pointer]
+        - button "converter" [ref=e22] [cursor=pointer]
+      - list [ref=e23]:
+        - listitem [ref=e24]:
+          - text: "Preset:"
+          - code [ref=e25]: standalone
+        - listitem [ref=e26]:
+          - text: "Preset label:"
+          - code [ref=e27]: Verified Fuji standalone sample
+        - listitem [ref=e28]:
+          - text: "Contract:"
+          - code [ref=e29]: "0x5E9c6F952fB9615583182e70eDDC4e6E4E0aC0e0"
+        - listitem [ref=e30]:
+          - text: "Contract source:"
+          - code [ref=e31]: verified Fuji sample default
+        - listitem [ref=e32]:
+          - text: "Converter token:"
+          - code [ref=e33]: standalone contract or not set
+    - article [ref=e34]:
+      - heading "Live contract" [level=2] [ref=e35]
+      - paragraph [ref=e36]: Reading live Fuji contract state...
+    - article [ref=e37]:
+      - heading "Privacy flow" [level=2] [ref=e38]
+      - paragraph [ref=e39]: Connect a wallet first.

@@ -1,0 +1,15 @@
+{
+  "source": "https://github.com/ava-labs/EncryptedERC",
+  "files": [
+    "registration.wasm",
+    "registration.zkey",
+    "mint.wasm",
+    "mint.zkey",
+    "transfer.wasm",
+    "transfer.zkey",
+    "withdraw.wasm",
+    "withdraw.zkey",
+    "burn.wasm",
+    "burn.zkey"
+  ]
+}

@@ -1,0 +1,14 @@
+[     308ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:4175/node_modules/.vite/deps/chunk-WS6JY4C2.js?v=cc4cfc06:28486
+[    4070ms] [ERROR] ProviderNotFoundError: Provider not found.
+
+Version: @wagmi/core@2.16.7
+    at Object.connect (http://127.0.0.1:4175/node_modules/.vite/deps/chunk-F4HJ6VUK.js?v=cc4cfc06:11227:15)
+    at async connect (http://127.0.0.1:4175/node_modules/.vite/deps/chunk-F4HJ6VUK.js?v=cc4cfc06:9313:18) @ http://127.0.0.1:4175/node_modules/.vite/deps/chunk-DRH4YR2K.js?v=cc4cfc06:1435
+[ 3827258ms] [LOG] [vite] server connection lost. Polling for restart... @ http://127.0.0.1:4175/@vite/client:863
+[ 3827272ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4175/' failed: Error in connection establishment: net::ERR_NETWORK_IO_SUSPENDED @ http://127.0.0.1:4175/@vite/client:920
+[ 4255024ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:4175/node_modules/.vite/deps/chunk-WS6JY4C2.js?v=cc4cfc06:28486
+[ 5211280ms] [ERROR] ProviderNotFoundError: Provider not found.
+
+Version: @wagmi/core@2.16.7
+    at Object.connect (http://127.0.0.1:4175/node_modules/.vite/deps/chunk-F4HJ6VUK.js?v=cc4cfc06:11227:15)
+    at async connect (http://127.0.0.1:4175/node_modules/.vite/deps/chunk-F4HJ6VUK.js?v=cc4cfc06:9313:18) @ http://127.0.0.1:4175/node_modules/.vite/deps/chunk-DRH4YR2K.js?v=cc4cfc06:1435
