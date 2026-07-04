@@ -4,6 +4,7 @@ import {
   type CompatiblePublicClient,
   type CompatibleWalletClient,
 } from "@avalabs/eerc-sdk";
+import { isAddress } from "viem";
 import { avalancheFuji } from "wagmi/chains";
 import {
   useAccount,
@@ -24,9 +25,20 @@ type ActivityItem = {
   detail: string;
 };
 
-const STORAGE_KEY = "apk.decryption-key";
 const docsUrl =
   "https://build.avax.network/events/b5e9fe35-5b5d-4fac-8709-e8eac8a1eaee";
+const REQUIRED_ASSET_PATHS = [
+  "/registration.wasm",
+  "/registration.zkey",
+  "/transfer.wasm",
+  "/transfer.zkey",
+  "/mint.wasm",
+  "/mint.zkey",
+  "/withdraw.wasm",
+  "/withdraw.zkey",
+  "/burn.wasm",
+  "/burn.zkey",
+] as const;
 
 function truncate(value: string, width = 6) {
   return `${value.slice(0, width)}...${value.slice(-4)}`;
@@ -36,27 +48,44 @@ function formatMaybeBigint(value: bigint | undefined) {
   return value === undefined ? "-" : value.toString();
 }
 
-function useStoredDecryptionKey() {
+function getDecryptionKeyStorageKey(scope: string) {
+  return `apk.decryption-key:${scope}`;
+}
+
+function useStoredDecryptionKey(scope: string | undefined) {
   const [key, setKey] = useState<string>(() => {
     if (typeof window === "undefined") {
       return "";
     }
 
-    return window.localStorage.getItem(STORAGE_KEY) ?? "";
+    if (!scope) {
+      return "";
+    }
+
+    return window.localStorage.getItem(getDecryptionKeyStorageKey(scope)) ?? "";
   });
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !scope) {
+      setKey("");
+      return;
+    }
+
+    setKey(window.localStorage.getItem(getDecryptionKeyStorageKey(scope)) ?? "");
+  }, [scope]);
 
   const update = (next: string) => {
     setKey(next);
-    if (typeof window === "undefined") {
+    if (typeof window === "undefined" || !scope) {
       return;
     }
 
     if (next) {
-      window.localStorage.setItem(STORAGE_KEY, next);
+      window.localStorage.setItem(getDecryptionKeyStorageKey(scope), next);
       return;
     }
 
-    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(getDecryptionKeyStorageKey(scope));
   };
 
   return [key, update] as const;
@@ -64,7 +93,11 @@ function useStoredDecryptionKey() {
 
 function App() {
   const baseConfig = useMemo(() => getStarterConfig(), []);
-  const [hasCircuitAssets, setHasCircuitAssets] = useState(false);
+  const [assetStatus, setAssetStatus] = useState<{
+    ready: boolean;
+    missing: string[];
+    error?: string;
+  }>({ ready: false, missing: [] });
   const [selectedPreset, setSelectedPreset] = useState<DemoPreset>(baseConfig.preset);
   const [readOnlyState, setReadOnlyState] = useState<{
     name: string;
@@ -77,6 +110,7 @@ function App() {
     tokenSymbol: string;
     tokenDecimals?: number;
   } | null>(null);
+  const [readOnlyError, setReadOnlyError] = useState("");
 
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -106,14 +140,50 @@ function App() {
   const isWrongChain = Boolean(isConnected && chainId !== avalancheFuji.id);
 
   useEffect(() => {
-    void fetch("/eerc-assets.json", { cache: "no-store" })
-      .then((response) => setHasCircuitAssets(response.ok))
-      .catch(() => setHasCircuitAssets(false));
+    let cancelled = false;
+
+    const checkAssets = async () => {
+      const paths = ["/eerc-assets.json", ...REQUIRED_ASSET_PATHS];
+
+      try {
+        const results = await Promise.all(
+          paths.map(async (path) => ({
+            path,
+            ok: (await fetch(path, { cache: "no-store" })).ok,
+          })),
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        const missing = results.filter((item) => !item.ok).map((item) => item.path);
+        setAssetStatus({
+          ready: missing.length === 0,
+          missing,
+        });
+      } catch (caught) {
+        if (!cancelled) {
+          setAssetStatus({
+            ready: false,
+            missing: paths.slice(),
+            error: caught instanceof Error ? caught.message : "Asset check failed",
+          });
+        }
+      }
+    };
+
+    void checkAssets();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     if (!publicClient || !starterConfig.contractAddress) {
       setReadOnlyState(null);
+      setReadOnlyError("");
       return;
     }
 
@@ -187,6 +257,7 @@ function App() {
           return;
         }
 
+        setReadOnlyError("");
         setReadOnlyState({
           name,
           symbol,
@@ -200,9 +271,12 @@ function App() {
           tokenSymbol,
           tokenDecimals,
         });
-      } catch {
+      } catch (caught) {
         if (!cancelled) {
           setReadOnlyState(null);
+          setReadOnlyError(
+            caught instanceof Error ? caught.message : "Live contract read failed",
+          );
         }
       }
     };
@@ -293,23 +367,45 @@ function App() {
 
         <article className="panel">
           <h2>Starter status</h2>
-          <p className={`status ${starterConfig.missing.length === 0 ? "ok" : "warn"}`}>
-            {starterConfig.missing.length === 0
+          <p
+            className={`status ${
+              starterConfig.missing.length === 0 && starterConfig.invalid.length === 0
+                ? "ok"
+                : "warn"
+            }`}
+          >
+            {starterConfig.missing.length === 0 && starterConfig.invalid.length === 0
               ? "eERC config present"
               : "Waiting for eERC contract and proof assets"}
           </p>
-          {starterConfig.missing.length > 0 ? (
+          {starterConfig.missing.length > 0 || starterConfig.invalid.length > 0 ? (
             <>
-              <p className="muted">
-                Missing env vars from <code>apps/starter/.env.example</code>:
-              </p>
-              <ul className="list">
-                {starterConfig.missing.map((item) => (
-                  <li key={item}>
-                    <code>{item}</code>
-                  </li>
-                ))}
-              </ul>
+              {starterConfig.missing.length > 0 ? (
+                <>
+                  <p className="muted">
+                    Missing env vars from <code>apps/starter/.env.example</code>:
+                  </p>
+                  <ul className="list">
+                    {starterConfig.missing.map((item) => (
+                      <li key={item}>
+                        <code>{item}</code>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+              {starterConfig.invalid.length > 0 ? (
+                <>
+                  <p className="error">Invalid env address values:</p>
+                  <ul className="list">
+                    {starterConfig.invalid.map((item) => (
+                      <li key={item}>
+                        <code>{item}</code>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
             </>
           ) : (
             <>
@@ -396,6 +492,8 @@ function App() {
                 </li>
               ) : null}
             </ul>
+          ) : readOnlyError ? (
+            <p className="error">{readOnlyError}</p>
           ) : (
             <p className="muted">Reading live Fuji contract state...</p>
           )}
@@ -411,13 +509,14 @@ function App() {
             !starterConfig.circuitUrls ||
             !publicClient ||
             !walletClient ||
-            !hasCircuitAssets ? (
-            <BlockedFlow config={starterConfig} assetsReady={hasCircuitAssets} />
+            !assetStatus.ready ? (
+            <BlockedFlow config={starterConfig} assetStatus={assetStatus} />
           ) : (
             <PrivacyWorkbench
               config={starterConfig}
               publicClient={publicClient}
               walletClient={walletClient}
+              walletAddress={address}
             />
           )}
         </article>
@@ -428,10 +527,14 @@ function App() {
 
 function BlockedFlow({
   config,
-  assetsReady,
+  assetStatus,
 }: {
   config: StarterConfig;
-  assetsReady: boolean;
+  assetStatus: {
+    ready: boolean;
+    missing: string[];
+    error?: string;
+  };
 }) {
   return (
     <div className="stack">
@@ -440,15 +543,32 @@ function BlockedFlow({
         Verified blocker: the starter still needs a real deployed eERC contract
         address.
       </p>
-      {!assetsReady ? (
-        <p className="muted">
-          Circuit assets are not staged yet. Run <code>pnpm eerc:assets</code>.
-        </p>
+      {!assetStatus.ready ? (
+        <>
+          <p className="muted">
+            Circuit assets are not staged cleanly yet. Run <code>pnpm eerc:assets</code>.
+          </p>
+          {assetStatus.error ? <p className="error">{assetStatus.error}</p> : null}
+          {assetStatus.missing.length > 0 ? (
+            <ul className="list">
+              {assetStatus.missing.map((item) => (
+                <li key={item}>
+                  <code>{item}</code>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </>
       ) : null}
       <ul className="list">
         {config.missing.map((item) => (
           <li key={item}>
             <code>{item}</code>
+          </li>
+        ))}
+        {config.invalid.map((item) => (
+          <li key={item}>
+            <code>{item}</code> invalid address
           </li>
         ))}
       </ul>
@@ -464,12 +584,25 @@ function PrivacyWorkbench({
   config,
   publicClient,
   walletClient,
+  walletAddress,
 }: {
   config: StarterConfig;
   publicClient: NonNullable<ReturnType<typeof usePublicClient>>;
   walletClient: NonNullable<ReturnType<typeof useWalletClient>["data"]>;
+  walletAddress?: `0x${string}`;
 }) {
-  const [decryptionKey, setDecryptionKey] = useStoredDecryptionKey();
+  const decryptionKeyScope = useMemo(() => {
+    if (!walletAddress || !config.contractAddress) {
+      return undefined;
+    }
+
+    return [
+      walletAddress.toLowerCase(),
+      config.contractAddress.toLowerCase(),
+      config.preset,
+    ].join(":");
+  }, [config.contractAddress, config.preset, walletAddress]);
+  const [decryptionKey, setDecryptionKey] = useStoredDecryptionKey(decryptionKeyScope);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("1");
@@ -535,7 +668,25 @@ function PrivacyWorkbench({
   };
 
   const handleTransfer = async () => {
+    if (!isAddress(recipient)) {
+      setError("Recipient must be a valid EVM address.");
+      setStatus("Private transfer failed");
+      return;
+    }
+
+    if (!/^[0-9]+$/.test(amount)) {
+      setError("Amount must be a whole number.");
+      setStatus("Private transfer failed");
+      return;
+    }
+
     const parsedAmount = BigInt(amount);
+
+    if (parsedAmount <= 0n) {
+      setError("Amount must be greater than zero.");
+      setStatus("Private transfer failed");
+      return;
+    }
 
     await runAction("Private transfer", async () => {
       const result = await balance.privateTransfer(recipient, parsedAmount);

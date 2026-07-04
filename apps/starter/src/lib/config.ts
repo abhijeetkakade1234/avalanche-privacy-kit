@@ -1,3 +1,4 @@
+import { isAddress } from "viem";
 import { demoContracts, type DemoPreset } from "./demoContracts";
 
 const requiredFields = [] as const;
@@ -20,6 +21,7 @@ export type StarterConfig = {
     burn: { wasm: string; zkey: string };
   };
   missing: RequiredField[];
+  invalid: string[];
 };
 
 function readEnvValue(name: string) {
@@ -36,13 +38,29 @@ export function getStarterConfig(): StarterConfig {
   const missing = requiredFields.filter((field) => !readEnvValue(field));
   const preset = readPreset();
   const presetConfig = demoContracts[preset];
+  const invalid: string[] = [];
 
-  const contractAddress =
+  const rawContractAddress =
     readEnvValue("VITE_EERC_CONTRACT_ADDRESS") ?? presetConfig.contractAddress;
-  const tokenAddress =
+  const rawTokenAddress =
     readEnvValue("VITE_EERC_TOKEN_ADDRESS") ?? presetConfig.tokenAddress;
 
-  if (missing.length > 0 || !contractAddress) {
+  const contractAddress = rawContractAddress && isAddress(rawContractAddress)
+    ? rawContractAddress
+    : undefined;
+  const tokenAddress = rawTokenAddress && isAddress(rawTokenAddress)
+    ? rawTokenAddress
+    : undefined;
+
+  if (rawContractAddress && !contractAddress) {
+    invalid.push("VITE_EERC_CONTRACT_ADDRESS");
+  }
+
+  if (rawTokenAddress && !tokenAddress) {
+    invalid.push("VITE_EERC_TOKEN_ADDRESS");
+  }
+
+  if (missing.length > 0 || invalid.length > 0 || !contractAddress) {
     return {
       preset,
       presetLabel: presetConfig.label,
@@ -53,6 +71,7 @@ export function getStarterConfig(): StarterConfig {
         tokenAddress !== presetConfig.tokenAddress,
       usingDefaultContract: contractAddress === presetConfig.contractAddress,
       missing,
+      invalid,
     };
   }
 
@@ -88,5 +107,6 @@ export function getStarterConfig(): StarterConfig {
       },
     },
     missing: [],
+    invalid: [],
   };
 }
