@@ -4,7 +4,7 @@ import {
   type CompatiblePublicClient,
   type CompatibleWalletClient,
 } from "@avalabs/eerc-sdk";
-import { isAddress } from "viem";
+import { isAddress, parseUnits } from "viem";
 import { avalancheFuji } from "wagmi/chains";
 import {
   useAccount,
@@ -17,12 +17,22 @@ import {
 } from "wagmi";
 import { getStarterConfig, type StarterConfig } from "./lib/config";
 import { demoContracts, type DemoPreset } from "./lib/demoContracts";
-import { eercReadOnlyAbi, erc20ReadOnlyAbi } from "./lib/eercReadOnly";
+import {
+  eercReadOnlyAbi,
+  erc20ApproveAbi,
+  erc20ReadOnlyAbi,
+} from "./lib/eercReadOnly";
 
 type ActivityItem = {
   id: number;
   label: string;
   detail: string;
+};
+
+type PublicTokenState = {
+  balance?: bigint;
+  allowance?: bigint;
+  decimals?: number;
 };
 
 const docsUrl =
@@ -46,6 +56,30 @@ function truncate(value: string, width = 6) {
 
 function formatMaybeBigint(value: bigint | undefined) {
   return value === undefined ? "-" : value.toString();
+}
+
+function formatTokenAmount(value: bigint | undefined, decimals: number | undefined) {
+  if (value === undefined) {
+    return "-";
+  }
+
+  if (decimals === undefined) {
+    return value.toString();
+  }
+
+  const normalized = value.toString().padStart(decimals + 1, "0");
+  const whole = normalized.slice(0, -decimals) || "0";
+  const fraction = normalized.slice(-decimals).replace(/0+$/, "");
+  return fraction ? `${whole}.${fraction}` : whole;
+}
+
+function stringifyWithBigints(value: unknown) {
+  return JSON.stringify(
+    value,
+    (_key, currentValue) =>
+      typeof currentValue === "bigint" ? currentValue.toString() : currentValue,
+    2,
+  );
 }
 
 function getDecryptionKeyStorageKey(scope: string) {
@@ -505,6 +539,10 @@ function App() {
             <p className="muted">Connect a wallet first.</p>
           ) : isWrongChain ? (
             <p className="muted">Switch to Fuji before using the privacy flow.</p>
+          ) : !address || !walletClient?.account?.address ? (
+            <p className="muted">Waiting for the wallet session to finish loading.</p>
+          ) : !readOnlyState?.registrar || readOnlyState.isConverter === undefined ? (
+            <p className="muted">Reading live Fuji contract state...</p>
           ) : !starterConfig.contractAddress ||
             !starterConfig.circuitUrls ||
             !publicClient ||
@@ -513,6 +551,7 @@ function App() {
             <BlockedFlow config={starterConfig} assetStatus={assetStatus} />
           ) : (
             <PrivacyWorkbench
+              key={`${starterConfig.contractAddress}:${address}:${starterConfig.preset}`}
               config={starterConfig}
               publicClient={publicClient}
               walletClient={walletClient}
@@ -606,8 +645,10 @@ function PrivacyWorkbench({
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("1");
+  const [depositAmount, setDepositAmount] = useState("1");
   const [status, setStatus] = useState<string>("Ready");
   const [error, setError] = useState<string>("");
+  const [publicTokenState, setPublicTokenState] = useState<PublicTokenState>({});
 
   const eerc = useEERC(
     publicClient as CompatiblePublicClient,
@@ -618,6 +659,73 @@ function PrivacyWorkbench({
   );
 
   const balance = eerc.useEncryptedBalance(config.tokenAddress);
+  const publicTokenSymbol = config.preset === "converter" ? "TEST" : undefined;
+  const hasEnoughAllowance = useMemo(() => {
+    if (!publicTokenState.allowance || publicTokenState.decimals === undefined) {
+      return false;
+    }
+
+    try {
+      return publicTokenState.allowance >= parseUnits(depositAmount || "0", publicTokenState.decimals);
+    } catch {
+      return false;
+    }
+  }, [depositAmount, publicTokenState.allowance, publicTokenState.decimals]);
+
+  useEffect(() => {
+    if (!walletAddress || !config.tokenAddress || !config.contractAddress) {
+      setPublicTokenState({});
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadPublicTokenState = async () => {
+      try {
+        const [nextBalance, nextAllowance, nextDecimals] = await Promise.all([
+          publicClient.readContract({
+            address: config.tokenAddress!,
+            abi: erc20ReadOnlyAbi,
+            functionName: "balanceOf",
+            args: [walletAddress],
+          }),
+          publicClient.readContract({
+            address: config.tokenAddress!,
+            abi: erc20ReadOnlyAbi,
+            functionName: "allowance",
+            args: [walletAddress, config.contractAddress!],
+          }),
+          publicClient.readContract({
+            address: config.tokenAddress!,
+            abi: erc20ReadOnlyAbi,
+            functionName: "decimals",
+          }),
+        ]);
+
+        if (!cancelled) {
+          setPublicTokenState({
+            balance: nextBalance,
+            allowance: nextAllowance,
+            decimals: Number(nextDecimals),
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setPublicTokenState({});
+        }
+      }
+    };
+
+    void loadPublicTokenState();
+    const timer = window.setInterval(() => {
+      void loadPublicTokenState();
+    }, 15000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [config.contractAddress, config.tokenAddress, publicClient, walletAddress]);
 
   const pushActivity = (label: string, detail: string) => {
     setActivity((current) => [
@@ -695,6 +803,89 @@ function PrivacyWorkbench({
     });
   };
 
+  const handleApprove = async () => {
+    if (!config.tokenAddress || !config.contractAddress) {
+      setError("Converter token is not configured.");
+      setStatus("Approve failed");
+      return;
+    }
+
+    if (publicTokenState.decimals === undefined) {
+      setError("Token decimals are not loaded yet.");
+      setStatus("Approve failed");
+      return;
+    }
+
+    let parsedAmount: bigint;
+    try {
+      parsedAmount = parseUnits(depositAmount, publicTokenState.decimals);
+    } catch {
+      setError("Deposit amount is invalid.");
+      setStatus("Approve failed");
+      return;
+    }
+
+    if (parsedAmount <= 0n) {
+      setError("Deposit amount must be greater than zero.");
+      setStatus("Approve failed");
+      return;
+    }
+
+    const tokenAddress = config.tokenAddress;
+    const contractAddress = config.contractAddress;
+    const connectedWalletClient = walletClient as CompatibleWalletClient;
+
+    await runAction("Approve public token", async () => {
+      const { request } = await publicClient.simulateContract({
+        address: tokenAddress,
+        abi: erc20ApproveAbi,
+        functionName: "approve",
+        args: [contractAddress, parsedAmount],
+        account: connectedWalletClient.account,
+      });
+      const transactionHash = await connectedWalletClient.writeContract(request);
+      setPublicTokenState((current) => ({
+        ...current,
+        allowance: parsedAmount,
+      }));
+      return `tx: ${transactionHash}`;
+    });
+  };
+
+  const handleDeposit = async () => {
+    if (publicTokenState.decimals === undefined) {
+      setError("Token decimals are not loaded yet.");
+      setStatus("Deposit failed");
+      return;
+    }
+
+    let parsedAmount: bigint;
+    try {
+      parsedAmount = parseUnits(depositAmount, publicTokenState.decimals);
+    } catch {
+      setError("Deposit amount is invalid.");
+      setStatus("Deposit failed");
+      return;
+    }
+
+    if (parsedAmount <= 0n) {
+      setError("Deposit amount must be greater than zero.");
+      setStatus("Deposit failed");
+      return;
+    }
+
+    await runAction("Deposit to private balance", async () => {
+      const result = await balance.deposit(parsedAmount);
+      balance.refetchBalance();
+      setPublicTokenState((current) => ({
+        ...current,
+        balance:
+          current.balance === undefined ? current.balance : current.balance - parsedAmount,
+      }));
+      return `tx: ${result.transactionHash}`;
+    });
+  };
+
   return (
     <>
       <p className="status ok">{status}</p>
@@ -742,6 +933,50 @@ function PrivacyWorkbench({
         </button>
       </div>
 
+      {eerc.isConverter ? (
+        <div className="stack">
+          <div className="facts">
+            <div>
+              <span>Public {publicTokenSymbol} balance</span>
+              <strong>
+                {formatTokenAmount(publicTokenState.balance, publicTokenState.decimals)}
+              </strong>
+            </div>
+            <div>
+              <span>Allowance to converter</span>
+              <strong>
+                {formatTokenAmount(publicTokenState.allowance, publicTokenState.decimals)}
+              </strong>
+            </div>
+          </div>
+          <label className="field">
+            <span>Deposit public {publicTokenSymbol} into private balance</span>
+            <input
+              value={depositAmount}
+              onChange={(event) => setDepositAmount(event.target.value)}
+              inputMode="decimal"
+              placeholder="1"
+            />
+          </label>
+          <div className="inline-actions">
+            <button className="button button-ghost" onClick={handleApprove}>
+              Approve {publicTokenSymbol}
+            </button>
+            <button
+              className="button"
+              onClick={handleDeposit}
+              disabled={!eerc.isRegistered || !hasEnoughAllowance}
+            >
+              Deposit to private balance
+            </button>
+          </div>
+          <p className="muted">
+            In converter mode you need public {publicTokenSymbol} plus allowance before the
+            private balance can increase.
+          </p>
+        </div>
+      ) : null}
+
       <div className="stack">
         <label className="field">
           <span>Recipient address</span>
@@ -775,7 +1010,7 @@ function PrivacyWorkbench({
           <p className="muted">
             The SDK gives both decrypted and encrypted balance state.
           </p>
-          <pre>{JSON.stringify(balance.encryptedBalance, null, 2)}</pre>
+          <pre>{stringifyWithBigints(balance.encryptedBalance)}</pre>
         </article>
 
         <article className="subpanel">
