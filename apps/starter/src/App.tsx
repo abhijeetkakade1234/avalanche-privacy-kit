@@ -80,7 +80,10 @@ function isAuditorKeyConfigured(publicKey: string[] | undefined) {
   return Boolean(
     publicKey &&
       publicKey.length === 2 &&
-      !(publicKey[0] === "0" && publicKey[1] === "1"),
+      !(
+        publicKey[0] === "0" &&
+        (publicKey[1] === "0" || publicKey[1] === "1")
+      ),
   );
 }
 
@@ -195,6 +198,11 @@ function App() {
         starterConfig.contractAddress.toLowerCase() &&
       (activeStoredPreset.tokenAddress?.toLowerCase() ?? "") ===
         (starterConfig.tokenAddress?.toLowerCase() ?? ""),
+  );
+  const isUsingCommittedRepoOwnedConfig = Boolean(
+    !baseConfig.isCustomOverride &&
+      !isUsingStoredDeployment &&
+      starterConfig.presetLabel.toLowerCase().includes("repo-owned"),
   );
 
   const isWrongChain = Boolean(isConnected && chainId !== avalancheFuji.id);
@@ -591,7 +599,9 @@ ${entries.join("\n")}
                       ? "env override"
                       : isUsingStoredDeployment
                         ? "browser deployment cache"
-                        : "shared preset default"}
+                        : isUsingCommittedRepoOwnedConfig
+                          ? "committed repo-owned config"
+                          : "shared preset default"}
                   </code>
                 </li>
                 <li>

@@ -29,7 +29,7 @@ Root commands:
 - `pnpm eerc:assets` copies the verified eERC circuit artifacts into the starter's public folder
 - `pnpm apply:fuji` applies `output/fuji-deployment.json` to the starter config
 - `pnpm deploy:fuji` deploys repo-owned Fuji contracts, writes the starter addresses, stages assets, and verifies the deployment
-- `pnpm verify:fuji` rechecks the repo-owned Fuji deployment from `output/fuji-deployment.json`
+- `pnpm verify:fuji` rechecks `output/fuji-deployment.json` when present, otherwise it verifies the committed repo-owned starter config
 - `pnpm dev` runs the starter app
 - `pnpm build` builds the starter app for production
 

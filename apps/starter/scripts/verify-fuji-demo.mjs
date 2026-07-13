@@ -30,6 +30,37 @@ const erc20Abi = [
   { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
 ];
 
+function readCommittedStarterConfig(repoRoot) {
+  const configPath = path.join(
+    repoRoot,
+    "apps",
+    "starter",
+    "src",
+    "lib",
+    "localDemoContracts.ts",
+  );
+  if (!existsSync(configPath)) {
+    return undefined;
+  }
+
+  const config = readFileSync(configPath, "utf8");
+  const standalone = config.match(
+    /standalone:\s*{[\s\S]*?contractAddress:\s*"(?<address>0x[a-fA-F0-9]{40})"/,
+  )?.groups?.address;
+  const converter = config.match(
+    /converter:\s*{[\s\S]*?contractAddress:\s*"(?<address>0x[a-fA-F0-9]{40})"/,
+  )?.groups?.address;
+  const demoToken = config.match(
+    /converter:\s*{[\s\S]*?tokenAddress:\s*"(?<address>0x[a-fA-F0-9]{40})"/,
+  )?.groups?.address;
+
+  if (!standalone || !converter || !demoToken) {
+    return undefined;
+  }
+
+  return { standalone, converter, demoToken };
+}
+
 function getPresets() {
   const repoRoot = path.resolve(process.cwd(), "..", "..");
   const deploymentPath = path.join(repoRoot, "output", "fuji-deployment.json");
@@ -61,9 +92,30 @@ function getPresets() {
     ];
   }
 
+  const starterConfig = readCommittedStarterConfig(repoRoot);
+  if (starterConfig) {
+    return [
+      {
+        preset: "standalone",
+        source: "committed repo-owned starter config",
+        contractAddress: starterConfig.standalone,
+        expectedIsConverter: false,
+      },
+      {
+        preset: "converter",
+        source: "committed repo-owned starter config",
+        contractAddress: starterConfig.converter,
+        tokenAddress: starterConfig.demoToken,
+        expectedIsConverter: true,
+        expectedTokenSymbol: "DMT",
+        expectedTokenDecimals: 18,
+      },
+    ];
+  }
+
   if (!allowSharedSample) {
     throw new Error(
-      "No repo-owned Fuji deployment found. Run `pnpm deploy:fuji`, or pass `--shared` only when intentionally checking Ava Labs sample contracts.",
+      "No repo-owned Fuji deployment found. Run `pnpm deploy:fuji`, commit apps/starter/src/lib/localDemoContracts.ts, or pass `--shared` only when intentionally checking Ava Labs sample contracts.",
     );
   }
 
