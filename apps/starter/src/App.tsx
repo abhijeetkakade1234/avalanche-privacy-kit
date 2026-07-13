@@ -244,6 +244,40 @@ function App() {
     }
   };
 
+  const handleCopyStoredConfig = async () => {
+    const standalone = storedDemoContracts.standalone;
+    const converter = storedDemoContracts.converter;
+    if (!standalone && !converter) {
+      return;
+    }
+
+    const entries = [
+      standalone
+        ? `  standalone: {
+    label: ${JSON.stringify(standalone.label)},
+    contractAddress: "${standalone.contractAddress}",
+  },`
+        : "",
+      converter
+        ? `  converter: {
+    label: ${JSON.stringify(converter.label)},
+    contractAddress: "${converter.contractAddress}",
+${converter.tokenAddress ? `    tokenAddress: "${converter.tokenAddress}",\n` : ""}  },`
+        : "",
+    ].filter(Boolean);
+
+    try {
+      await navigator.clipboard.writeText(
+        `export const localDemoContracts = {
+${entries.join("\n")}
+};\n`,
+      );
+      setCopyStatus("Copied localDemoContracts.ts content.");
+    } catch (caught) {
+      setCopyStatus(caught instanceof Error ? caught.message : "Copy failed");
+    }
+  };
+
   const handleResetStoredDeployment = () => {
     window.localStorage.removeItem("apk.localDemoContracts");
     window.location.reload();
@@ -569,6 +603,12 @@ function App() {
                       onClick={() => void handleCopyStoredDeployment()}
                     >
                       Copy deployment JSON
+                    </button>
+                    <button
+                      className="button button-ghost"
+                      onClick={() => void handleCopyStoredConfig()}
+                    >
+                      Copy app config
                     </button>
                     <button
                       className="button button-ghost"
