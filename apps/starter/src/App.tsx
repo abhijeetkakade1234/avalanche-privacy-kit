@@ -855,6 +855,17 @@ function PrivacyWorkbench({
       return false;
     }
   }, [depositAmount, publicTokenState.allowance, publicTokenState.decimals]);
+  const hasEnoughPublicBalance = useMemo(() => {
+    if (publicTokenState.balance === undefined || publicTokenState.decimals === undefined) {
+      return false;
+    }
+
+    try {
+      return publicTokenState.balance >= parseUnits(depositAmount || "0", publicTokenState.decimals);
+    } catch {
+      return false;
+    }
+  }, [depositAmount, publicTokenState.balance, publicTokenState.decimals]);
 
   useEffect(() => {
     if (!walletAddress || !config.tokenAddress || !config.contractAddress) {
@@ -1116,6 +1127,12 @@ function PrivacyWorkbench({
       return;
     }
 
+    if (publicTokenState.balance === undefined || parsedAmount > publicTokenState.balance) {
+      setError(`Not enough public ${publicTokenSymbol} for this deposit.`);
+      setStatus("Deposit failed");
+      return;
+    }
+
     await runAction("Deposit to private balance", async () => {
       const result = await balance.deposit(parsedAmount);
       balance.refetchBalance();
@@ -1280,7 +1297,7 @@ function PrivacyWorkbench({
             <button
               className="button"
               onClick={handleDeposit}
-              disabled={!eerc.isRegistered || !hasEnoughAllowance}
+              disabled={!eerc.isRegistered || !hasEnoughAllowance || !hasEnoughPublicBalance}
             >
               Deposit to private balance
             </button>
