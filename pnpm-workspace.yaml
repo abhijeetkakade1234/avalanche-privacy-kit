@@ -2,6 +2,7 @@ packages:
   - "contracts"
   - "apps/*"
 overrides:
+  aes-js: "4.0.0-beta.4"
   underscore: "^1.13.8"
   "ws@<8.21.0": "^8.21.0"
   "@metamask/sdk": "^0.33.1"
