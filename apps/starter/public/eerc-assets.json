@@ -1,15 +1,87 @@
 {
-  "source": "https://github.com/ava-labs/EncryptedERC",
+  "source": {
+    "deployment": "repo-owned tracked assets",
+    "circuits": "contracts/assets",
+    "deployArtifacts": "contracts/artifacts/contracts"
+  },
   "files": [
-    "registration.wasm",
-    "registration.zkey",
-    "mint.wasm",
-    "mint.zkey",
-    "transfer.wasm",
-    "transfer.zkey",
-    "withdraw.wasm",
-    "withdraw.zkey",
-    "burn.wasm",
-    "burn.zkey"
+    {
+      "output": "registration.wasm",
+      "source": "registration.wasm"
+    },
+    {
+      "output": "registration.zkey",
+      "source": "registration.zkey"
+    },
+    {
+      "output": "mint.wasm",
+      "source": "mint.wasm"
+    },
+    {
+      "output": "mint.zkey",
+      "source": "mint.zkey"
+    },
+    {
+      "output": "transfer.wasm",
+      "source": "transfer.wasm"
+    },
+    {
+      "output": "transfer.zkey",
+      "source": "transfer.zkey"
+    },
+    {
+      "output": "withdraw.wasm",
+      "source": "withdraw.wasm"
+    },
+    {
+      "output": "withdraw.zkey",
+      "source": "withdraw.zkey"
+    },
+    {
+      "output": "burn.wasm",
+      "source": "burn.wasm"
+    },
+    {
+      "output": "burn.zkey",
+      "source": "burn.zkey"
+    }
+  ],
+  "deployArtifacts": [
+    {
+      "output": "deploy-artifacts/registration-verifier.json",
+      "source": "contracts/artifacts/contracts/prod/RegistrationVerifier.sol/RegistrationVerifier.json"
+    },
+    {
+      "output": "deploy-artifacts/mint-verifier.json",
+      "source": "contracts/artifacts/contracts/prod/MintVerifier.sol/MintVerifier.json"
+    },
+    {
+      "output": "deploy-artifacts/withdraw-verifier.json",
+      "source": "contracts/artifacts/contracts/prod/WithdrawVerifier.sol/WithdrawVerifier.json"
+    },
+    {
+      "output": "deploy-artifacts/transfer-verifier.json",
+      "source": "contracts/artifacts/contracts/prod/TransferVerifier.sol/TransferVerifier.json"
+    },
+    {
+      "output": "deploy-artifacts/burn-verifier.json",
+      "source": "contracts/artifacts/contracts/prod/BurnVerifier.sol/BurnVerifier.json"
+    },
+    {
+      "output": "deploy-artifacts/babyjubjub.json",
+      "source": "contracts/artifacts/contracts/libraries/BabyJubJub.sol/BabyJubJub.json"
+    },
+    {
+      "output": "deploy-artifacts/registrar.json",
+      "source": "contracts/artifacts/contracts/Registrar.sol/Registrar.json"
+    },
+    {
+      "output": "deploy-artifacts/encrypted-erc.json",
+      "source": "contracts/artifacts/contracts/EncryptedERC.sol/EncryptedERC.json"
+    },
+    {
+      "output": "deploy-artifacts/simple-erc20.json",
+      "source": "contracts/artifacts/contracts/tokens/SimpleERC20.sol/SimpleERC20.json"
+    }
   ]
 }

@@ -4,7 +4,7 @@ import {
   type CompatiblePublicClient,
   type CompatibleWalletClient,
 } from "@avalabs/eerc-sdk";
-import { isAddress, parseUnits } from "viem";
+import { formatUnits, isAddress, parseUnits } from "viem";
 import { avalancheFuji } from "wagmi/chains";
 import {
   useAccount,
@@ -16,7 +16,12 @@ import {
   useWalletClient,
 } from "wagmi";
 import { getStarterConfig, type StarterConfig } from "./lib/config";
-import { demoContracts, type DemoPreset } from "./lib/demoContracts";
+import {
+  demoContracts,
+  readStoredDemoContracts,
+  type DemoPreset,
+} from "./lib/demoContracts";
+import { deployRepoOwnedFujiStack } from "./lib/repoOwnedDeployment";
 import {
   eercReadOnlyAbi,
   erc20ApproveAbi,
@@ -66,11 +71,15 @@ function formatTokenAmount(value: bigint | undefined, decimals: number | undefin
   if (decimals === undefined) {
     return value.toString();
   }
+  return formatUnits(value, decimals);
+}
 
-  const normalized = value.toString().padStart(decimals + 1, "0");
-  const whole = normalized.slice(0, -decimals) || "0";
-  const fraction = normalized.slice(-decimals).replace(/0+$/, "");
-  return fraction ? `${whole}.${fraction}` : whole;
+function isAuditorKeyConfigured(publicKey: string[] | undefined) {
+  return Boolean(
+    publicKey &&
+      publicKey.length === 2 &&
+      !(publicKey[0] === "0" && publicKey[1] === "1"),
+  );
 }
 
 function stringifyWithBigints(value: unknown) {
@@ -145,6 +154,10 @@ function App() {
     tokenDecimals?: number;
   } | null>(null);
   const [readOnlyError, setReadOnlyError] = useState("");
+  const [deploymentStatus, setDeploymentStatus] = useState("");
+  const [deploymentError, setDeploymentError] = useState("");
+  const [isDeployingOwnedStack, setIsDeployingOwnedStack] = useState(false);
+  const [copyStatus, setCopyStatus] = useState("");
 
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -154,6 +167,7 @@ function App() {
   const { switchChain } = useSwitchChain();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient({ chainId: avalancheFuji.id });
+  const storedDemoContracts = useMemo(() => readStoredDemoContracts(), []);
   const starterConfig = useMemo(() => {
     if (baseConfig.isCustomOverride) {
       return baseConfig;
@@ -170,8 +184,70 @@ function App() {
       isCustomOverride: false,
     };
   }, [baseConfig, selectedPreset]);
+  const activeStoredPreset = storedDemoContracts[selectedPreset];
+  const isUsingStoredDeployment = Boolean(
+    !baseConfig.isCustomOverride &&
+      activeStoredPreset?.contractAddress &&
+      starterConfig.contractAddress &&
+      activeStoredPreset.contractAddress.toLowerCase() ===
+        starterConfig.contractAddress.toLowerCase() &&
+      (activeStoredPreset.tokenAddress?.toLowerCase() ?? "") ===
+        (starterConfig.tokenAddress?.toLowerCase() ?? ""),
+  );
 
   const isWrongChain = Boolean(isConnected && chainId !== avalancheFuji.id);
+
+  const handleDeployOwnedStack = async () => {
+    if (!address || !walletClient || !publicClient) {
+      setDeploymentError("Connect a Fuji wallet before deploying.");
+      return;
+    }
+
+    setDeploymentError("");
+    setIsDeployingOwnedStack(true);
+
+    try {
+      await deployRepoOwnedFujiStack({
+        account: address,
+        publicClient,
+        walletClient,
+        onStatus: setDeploymentStatus,
+      });
+      setDeploymentStatus("Repo-owned deployment complete. Reloading starter...");
+      window.location.reload();
+    } catch (caught) {
+      setDeploymentError(
+        caught instanceof Error ? caught.message : "Repo-owned deployment failed",
+      );
+      setDeploymentStatus("Repo-owned deployment failed");
+    } finally {
+      setIsDeployingOwnedStack(false);
+    }
+  };
+
+  const handleCopyStoredDeployment = async () => {
+    if (!activeStoredPreset) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(
+        stringifyWithBigints({
+          [selectedPreset]: activeStoredPreset,
+        }),
+      );
+      setCopyStatus("Copied current browser deployment JSON.");
+    } catch (caught) {
+      setCopyStatus(
+        caught instanceof Error ? caught.message : "Copy failed",
+      );
+    }
+  };
+
+  const handleResetStoredDeployment = () => {
+    window.localStorage.removeItem("apk.localDemoContracts");
+    window.location.reload();
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -333,8 +409,9 @@ function App() {
         <h1>Shortest path to an eERC starter on Fuji.</h1>
         <p className="lede">
           This starter is wired around the current official Ava Labs eERC SDK.
-          Wallet connect works now. The app defaults to a verified Fuji sample
-          deployment and uses locally staged official circuit assets.
+          Wallet connect works now. The app uses locally staged official circuit
+          assets and can target either the shared Fuji sample or a repo-owned
+          Fuji deployment.
         </p>
         <div className="hero-actions">
           <a className="button button-ghost" href={docsUrl} target="_blank" rel="noreferrer">
@@ -471,7 +548,9 @@ function App() {
                   <code>
                     {starterConfig.isCustomOverride
                       ? "env override"
-                      : "verified Fuji sample default"}
+                      : isUsingStoredDeployment
+                        ? "browser deployment cache"
+                        : "shared preset default"}
                   </code>
                 </li>
                 <li>
@@ -479,6 +558,50 @@ function App() {
                   <code>{starterConfig.tokenAddress ?? "standalone contract or not set"}</code>
                 </li>
               </ul>
+              {activeStoredPreset ? (
+                <div className="stack">
+                  <p className="muted">
+                    Browser-stored {selectedPreset} deployment is active on this device.
+                  </p>
+                  <div className="inline-actions">
+                    <button
+                      className="button button-ghost"
+                      onClick={() => void handleCopyStoredDeployment()}
+                    >
+                      Copy deployment JSON
+                    </button>
+                    <button
+                      className="button button-ghost"
+                      onClick={handleResetStoredDeployment}
+                    >
+                      Reset browser deployment
+                    </button>
+                  </div>
+                  {copyStatus ? <p className="muted">{copyStatus}</p> : null}
+                </div>
+              ) : null}
+              {isConnected && !isWrongChain && walletClient && publicClient ? (
+                <div className="stack">
+                  <button
+                    className="button"
+                    onClick={handleDeployOwnedStack}
+                    disabled={isDeployingOwnedStack}
+                  >
+                    {isDeployingOwnedStack
+                      ? "Deploying repo-owned Fuji stack..."
+                      : "Deploy repo-owned Fuji stack"}
+                  </button>
+                  {deploymentStatus ? (
+                    <p className="muted">{deploymentStatus}</p>
+                  ) : (
+                    <p className="muted">
+                      Uses the connected Fuji wallet to deploy the full stack and store the
+                      addresses in this browser.
+                    </p>
+                  )}
+                  {deploymentError ? <p className="error">{deploymentError}</p> : null}
+                </div>
+              ) : null}
             </>
           )}
         </article>
@@ -512,7 +635,9 @@ function App() {
               <li>
                 Auditor key:{" "}
                 <code>
-                  {readOnlyState.auditorPublicKey.length > 0 ? "set" : "loading"}
+                  {isAuditorKeyConfigured(readOnlyState.auditorPublicKey)
+                    ? "set"
+                    : "missing"}
                 </code>
               </li>
               {starterConfig.tokenAddress ? (
@@ -556,6 +681,7 @@ function App() {
               publicClient={publicClient}
               walletClient={walletClient}
               walletAddress={address}
+              ownerAddress={readOnlyState.owner as `0x${string}`}
             />
           )}
         </article>
@@ -624,11 +750,13 @@ function PrivacyWorkbench({
   publicClient,
   walletClient,
   walletAddress,
+  ownerAddress,
 }: {
   config: StarterConfig;
   publicClient: NonNullable<ReturnType<typeof usePublicClient>>;
   walletClient: NonNullable<ReturnType<typeof useWalletClient>["data"]>;
   walletAddress?: `0x${string}`;
+  ownerAddress?: `0x${string}`;
 }) {
   const decryptionKeyScope = useMemo(() => {
     if (!walletAddress || !config.contractAddress) {
@@ -646,8 +774,10 @@ function PrivacyWorkbench({
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("1");
   const [depositAmount, setDepositAmount] = useState("1");
+  const [mintAmount, setMintAmount] = useState("1");
   const [status, setStatus] = useState<string>("Ready");
   const [error, setError] = useState<string>("");
+  const [needsBalanceRefresh, setNeedsBalanceRefresh] = useState(false);
   const [publicTokenState, setPublicTokenState] = useState<PublicTokenState>({});
 
   const eerc = useEERC(
@@ -660,6 +790,13 @@ function PrivacyWorkbench({
 
   const balance = eerc.useEncryptedBalance(config.tokenAddress);
   const publicTokenSymbol = config.preset === "converter" ? "TEST" : undefined;
+  const privateBalanceDecimals = Number(balance.decimals ?? 0n);
+  const isOwner =
+    Boolean(walletAddress && ownerAddress) &&
+    walletAddress!.toLowerCase() === ownerAddress!.toLowerCase();
+  const isStandaloneOwner =
+    !eerc.isConverter &&
+    isOwner;
   const hasEnoughAllowance = useMemo(() => {
     if (!publicTokenState.allowance || publicTokenState.decimals === undefined) {
       return false;
@@ -776,19 +913,38 @@ function PrivacyWorkbench({
   };
 
   const handleTransfer = async () => {
+    if (!eerc.isInitialized || !eerc.isDecryptionKeySet) {
+      setError("Privacy state is not ready yet.");
+      setStatus("Private transfer failed");
+      return;
+    }
+
+    if (needsBalanceRefresh) {
+      setError("Refresh private balance after the last write before sending again.");
+      setStatus("Private transfer failed");
+      return;
+    }
+
     if (!isAddress(recipient)) {
       setError("Recipient must be a valid EVM address.");
       setStatus("Private transfer failed");
       return;
     }
 
-    if (!/^[0-9]+$/.test(amount)) {
-      setError("Amount must be a whole number.");
+    if (!/^\d+(\.\d+)?$/.test(amount)) {
+      setError("Amount must be a valid token amount.");
       setStatus("Private transfer failed");
       return;
     }
 
-    const parsedAmount = BigInt(amount);
+    let parsedAmount: bigint;
+    try {
+      parsedAmount = parseUnits(amount, privateBalanceDecimals);
+    } catch {
+      setError("Amount does not match token decimals.");
+      setStatus("Private transfer failed");
+      return;
+    }
 
     if (parsedAmount <= 0n) {
       setError("Amount must be greater than zero.");
@@ -796,10 +952,43 @@ function PrivacyWorkbench({
       return;
     }
 
+    if (balance.decryptedBalance <= 0n || parsedAmount > balance.decryptedBalance) {
+      setError("Amount is higher than the current private balance.");
+      setStatus("Private transfer failed");
+      return;
+    }
+
+    const recipientRegistration = await eerc.isAddressRegistered(recipient);
+    if (!recipientRegistration.isRegistered) {
+      setError("Recipient wallet has not registered a privacy key yet.");
+      setStatus("Private transfer failed");
+      return;
+    }
+
     await runAction("Private transfer", async () => {
       const result = await balance.privateTransfer(recipient, parsedAmount);
       balance.refetchBalance();
+      setNeedsBalanceRefresh(true);
       return `tx: ${result.transactionHash}`;
+    });
+  };
+
+  const handleSetAuditor = async () => {
+    if (!walletAddress || !isOwner) {
+      setError("Only the contract owner can set the auditor key.");
+      setStatus("Set auditor failed");
+      return;
+    }
+
+    if (!eerc.isRegistered) {
+      setError("Register this wallet first so the contract can reuse its public key.");
+      setStatus("Set auditor failed");
+      return;
+    }
+
+    await runAction("Set contract auditor", async () => {
+      const transactionHash = await eerc.setContractAuditorPublicKey(walletAddress);
+      return `tx: ${transactionHash}`;
     });
   };
 
@@ -877,6 +1066,7 @@ function PrivacyWorkbench({
     await runAction("Deposit to private balance", async () => {
       const result = await balance.deposit(parsedAmount);
       balance.refetchBalance();
+      setNeedsBalanceRefresh(true);
       setPublicTokenState((current) => ({
         ...current,
         balance:
@@ -884,6 +1074,60 @@ function PrivacyWorkbench({
       }));
       return `tx: ${result.transactionHash}`;
     });
+  };
+
+  const handlePrivateMint = async () => {
+    if (!walletAddress || !isStandaloneOwner) {
+      setError("Standalone private mint is only available to the contract owner.");
+      setStatus("Private mint failed");
+      return;
+    }
+
+    if (!eerc.isInitialized || !eerc.isDecryptionKeySet) {
+      setError("Privacy state is not ready yet.");
+      setStatus("Private mint failed");
+      return;
+    }
+
+    if (needsBalanceRefresh) {
+      setError("Refresh private balance after the last write before minting again.");
+      setStatus("Private mint failed");
+      return;
+    }
+
+    if (!/^\d+(\.\d+)?$/.test(mintAmount)) {
+      setError("Mint amount must be a valid token amount.");
+      setStatus("Private mint failed");
+      return;
+    }
+
+    let parsedAmount: bigint;
+    try {
+      parsedAmount = parseUnits(mintAmount, privateBalanceDecimals);
+    } catch {
+      setError("Mint amount does not match token decimals.");
+      setStatus("Private mint failed");
+      return;
+    }
+
+    if (parsedAmount <= 0n) {
+      setError("Mint amount must be greater than zero.");
+      setStatus("Private mint failed");
+      return;
+    }
+
+    await runAction("Private mint", async () => {
+      const result = await balance.privateMint(walletAddress, parsedAmount);
+      balance.refetchBalance();
+      setNeedsBalanceRefresh(true);
+      return `tx: ${result.transactionHash}`;
+    });
+  };
+
+  const handleRefreshBalance = () => {
+    balance.refetchBalance();
+    setNeedsBalanceRefresh(false);
+    setStatus("Balance refresh requested");
   };
 
   return (
@@ -904,8 +1148,8 @@ function PrivacyWorkbench({
           <strong>{eerc.isConverter ? "converter" : "standalone"}</strong>
         </div>
         <div>
-          <span>Balance</span>
-          <strong>{formatMaybeBigint(balance.decryptedBalance)}</strong>
+          <span>Private balance</span>
+          <strong>{formatTokenAmount(balance.decryptedBalance, privateBalanceDecimals)}</strong>
         </div>
         <div>
           <span>Decryption key</span>
@@ -928,10 +1172,28 @@ function PrivacyWorkbench({
             Recover local key
           </button>
         ) : null}
-        <button className="button button-ghost" onClick={() => balance.refetchBalance()}>
+        <button className="button button-ghost" onClick={handleRefreshBalance}>
           Refresh balance
         </button>
+        {isOwner && eerc.isRegistered && !eerc.isAuditorKeySet ? (
+          <button className="button button-ghost" onClick={handleSetAuditor}>
+            Set contract auditor
+          </button>
+        ) : null}
       </div>
+
+      {isOwner && !eerc.isAuditorKeySet ? (
+        <p className="muted">
+          Fresh repo-owned deployments need one owner action: register this wallet, then set
+          it as the contract auditor before mint, deposit, or transfer.
+        </p>
+      ) : null}
+
+      {needsBalanceRefresh ? (
+        <p className="muted">
+          Refresh private balance before the next write so the UI uses the latest state.
+        </p>
+      ) : null}
 
       {eerc.isConverter ? (
         <div className="stack">
@@ -977,6 +1239,39 @@ function PrivacyWorkbench({
         </div>
       ) : null}
 
+      {!eerc.isConverter ? (
+        <div className="stack">
+          <label className="field">
+            <span>Mint private balance on standalone</span>
+            <input
+              value={mintAmount}
+              onChange={(event) => setMintAmount(event.target.value)}
+              inputMode="decimal"
+              placeholder="1"
+            />
+          </label>
+          <div className="inline-actions">
+            <button
+              className="button"
+              onClick={handlePrivateMint}
+              disabled={
+                !eerc.isRegistered ||
+                !eerc.isDecryptionKeySet ||
+                !isStandaloneOwner ||
+                needsBalanceRefresh
+              }
+            >
+              Mint private balance
+            </button>
+          </div>
+          <p className="muted">
+            {isStandaloneOwner
+              ? "Standalone mode skips public token deposit and mints directly into your private balance."
+              : "This shared Fuji standalone preset only lets the contract owner mint. Use it for registered balance and transfer testing, or deploy your own standalone contract to own minting."}
+          </p>
+        </div>
+      ) : null}
+
       <div className="stack">
         <label className="field">
           <span>Recipient address</span>
@@ -991,14 +1286,14 @@ function PrivacyWorkbench({
           <input
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
-            inputMode="numeric"
+            inputMode="decimal"
             placeholder="1"
           />
         </label>
         <button
           className="button"
           onClick={handleTransfer}
-          disabled={!eerc.isRegistered}
+          disabled={!eerc.isRegistered || !eerc.isDecryptionKeySet || needsBalanceRefresh}
         >
           Send private transfer
         </button>

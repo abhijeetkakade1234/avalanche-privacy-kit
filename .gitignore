@@ -5,3 +5,8 @@ dist/
 .env.*.local
 .codex/
 .agents/
+*.tsbuildinfo
+.codex-dev.log
+.tmp-*/
+contracts/artifacts/
+contracts/cache/

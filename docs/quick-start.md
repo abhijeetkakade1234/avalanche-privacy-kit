@@ -28,6 +28,7 @@ Root commands:
 
 - `pnpm eerc:assets` copies the verified eERC circuit artifacts into the starter's public folder
 - `pnpm verify:fuji` checks the verified Fuji sample contracts over JSON-RPC
+- `pnpm deploy:fuji` deploys repo-owned Fuji contracts and writes the starter addresses
 - `pnpm dev` runs the starter app
 - `pnpm build` builds the starter app for production
 
@@ -56,6 +57,7 @@ The current starter is intentionally honest about the remaining integration requ
 - Fuji targeting is live
 - the current official `@avalabs/eerc-sdk` hook is wired in
 - the official circuit assets can be staged locally with `pnpm eerc:assets`
+- repo-owned deployments use the snarkJS prod verifier contracts that match those proof assets
 - the sample Fuji contracts can be checked with `pnpm verify:fuji`
 - the starter can boot against a verified Fuji sample contract without extra env vars
 - the starter can switch between verified sample presets at runtime
@@ -79,8 +81,12 @@ Verified locally on July 2, 2026:
 - `pnpm build`
 - Vite dev server booted on `127.0.0.1:4174`
 
-## Current blocker
+## Repo-owned Fuji deployment
 
-The repo no longer needs manual proof asset URLs, and it now has a verified Fuji sample contract path, but it still does not own its own deployed Fuji eERC contract yet.
+The repo can deploy its own Fuji playground with either `pnpm deploy:fuji` from a local private key or the starter UI's `Deploy repo-owned Fuji stack` button from a connected browser wallet.
 
-For a project-owned demo, the remaining work is choosing whether to rely on the shared sample deployment or deploy fresh Fuji contracts for this repo.
+Fresh deployments require one owner setup flow in the starter:
+
+1. Register the wallet privacy key.
+2. Set the contract auditor.
+3. Mint private balance in standalone mode, or approve and deposit the demo ERC20 in converter mode.

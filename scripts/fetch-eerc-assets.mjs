@@ -4,87 +4,198 @@ import path from "node:path";
 
 const repoRoot = process.cwd();
 const outputDir = path.join(repoRoot, "apps", "starter", "public");
-const sourceDir = path.join(
-  repoRoot,
-  ".codex",
-  "references",
-  "EncryptedERC",
-  "circom",
-  "build",
-);
+const assetSourceDir = path.join(repoRoot, "contracts", "assets");
 
 const files = [
   {
-    source: path.join("registration", "registration.wasm"),
+    source: "registration.wasm",
     output: "registration.wasm",
   },
   {
-    source: path.join("registration", "circuit_final.zkey"),
+    source: "registration.zkey",
     output: "registration.zkey",
   },
   {
-    source: path.join("mint", "mint.wasm"),
+    source: "mint.wasm",
     output: "mint.wasm",
   },
   {
-    source: path.join("mint", "mint.zkey"),
+    source: "mint.zkey",
     output: "mint.zkey",
   },
   {
-    source: path.join("transfer", "transfer.wasm"),
+    source: "transfer.wasm",
     output: "transfer.wasm",
   },
   {
-    source: path.join("transfer", "transfer.zkey"),
+    source: "transfer.zkey",
     output: "transfer.zkey",
   },
   {
-    source: path.join("withdraw", "withdraw.wasm"),
+    source: "withdraw.wasm",
     output: "withdraw.wasm",
   },
   {
-    source: path.join("withdraw", "circuit_final.zkey"),
+    source: "withdraw.zkey",
     output: "withdraw.zkey",
   },
   {
-    source: path.join("burn", "burn.wasm"),
+    source: "burn.wasm",
     output: "burn.wasm",
   },
   {
-    source: path.join("burn", "burn.zkey"),
+    source: "burn.zkey",
     output: "burn.zkey",
   },
 ];
 
-const baseUrl =
-  "https://raw.githubusercontent.com/ava-labs/EncryptedERC/main/circom/build";
+const artifactFiles = [
+  {
+    source: path.join(
+      repoRoot,
+      "contracts",
+      "artifacts",
+      "contracts",
+      "prod",
+      "RegistrationVerifier.sol",
+      "RegistrationVerifier.json",
+    ),
+    output: "registration-verifier.json",
+  },
+  {
+    source: path.join(
+      repoRoot,
+      "contracts",
+      "artifacts",
+      "contracts",
+      "prod",
+      "MintVerifier.sol",
+      "MintVerifier.json",
+    ),
+    output: "mint-verifier.json",
+  },
+  {
+    source: path.join(
+      repoRoot,
+      "contracts",
+      "artifacts",
+      "contracts",
+      "prod",
+      "WithdrawVerifier.sol",
+      "WithdrawVerifier.json",
+    ),
+    output: "withdraw-verifier.json",
+  },
+  {
+    source: path.join(
+      repoRoot,
+      "contracts",
+      "artifacts",
+      "contracts",
+      "prod",
+      "TransferVerifier.sol",
+      "TransferVerifier.json",
+    ),
+    output: "transfer-verifier.json",
+  },
+  {
+    source: path.join(
+      repoRoot,
+      "contracts",
+      "artifacts",
+      "contracts",
+      "prod",
+      "BurnVerifier.sol",
+      "BurnVerifier.json",
+    ),
+    output: "burn-verifier.json",
+  },
+  {
+    source: path.join(
+      repoRoot,
+      "contracts",
+      "artifacts",
+      "contracts",
+      "libraries",
+      "BabyJubJub.sol",
+      "BabyJubJub.json",
+    ),
+    output: "babyjubjub.json",
+  },
+  {
+    source: path.join(
+      repoRoot,
+      "contracts",
+      "artifacts",
+      "contracts",
+      "Registrar.sol",
+      "Registrar.json",
+    ),
+    output: "registrar.json",
+  },
+  {
+    source: path.join(
+      repoRoot,
+      "contracts",
+      "artifacts",
+      "contracts",
+      "EncryptedERC.sol",
+      "EncryptedERC.json",
+    ),
+    output: "encrypted-erc.json",
+  },
+  {
+    source: path.join(
+      repoRoot,
+      "contracts",
+      "artifacts",
+      "contracts",
+      "tokens",
+      "SimpleERC20.sol",
+      "SimpleERC20.json",
+    ),
+    output: "simple-erc20.json",
+  },
+];
 
 await mkdir(outputDir, { recursive: true });
+await mkdir(path.join(outputDir, "deploy-artifacts"), { recursive: true });
 
 for (const file of files) {
-  const sourcePath = path.join(sourceDir, file.source);
+  const sourcePath = path.join(assetSourceDir, file.source);
   const targetPath = path.join(outputDir, file.output);
 
   if (existsSync(sourcePath)) {
     copyFileSync(sourcePath, targetPath);
     continue;
   }
+  throw new Error(`Missing local source for ${file.output}: ${sourcePath}`);
+}
 
-  const response = await fetch(`${baseUrl}/${file.source.replaceAll("\\", "/")}`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${file.output}: ${response.status}`);
+for (const file of artifactFiles) {
+  if (!existsSync(file.source)) {
+    throw new Error(`Missing compiled artifact for ${file.output}: ${file.source}`);
   }
-
-  const data = Buffer.from(await response.arrayBuffer());
-  await writeFile(targetPath, data);
+  copyFileSync(file.source, path.join(outputDir, "deploy-artifacts", file.output));
 }
 
 await writeFile(
   path.join(outputDir, "eerc-assets.json"),
   JSON.stringify(
     {
-      source: "https://github.com/ava-labs/EncryptedERC",
-      files: files.map((file) => file.output),
+      source: {
+        deployment: "repo-owned tracked assets",
+        circuits: "contracts/assets",
+        deployArtifacts: "contracts/artifacts/contracts",
+      },
+      files: files.map((file) => ({
+        output: file.output,
+        source: file.source,
+      })),
+      deployArtifacts: artifactFiles.map((file) => ({
+        output: `deploy-artifacts/${file.output}`,
+        source: path.relative(repoRoot, file.source).replaceAll("\\", "/"),
+      })),
     },
     null,
     2,
