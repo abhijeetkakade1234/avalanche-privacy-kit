@@ -3,6 +3,7 @@ import { localDemoContracts } from "./localDemoContracts";
 
 export type DemoPreset = "standalone" | "converter";
 export const LOCAL_DEMO_CONTRACTS_STORAGE_KEY = "apk.localDemoContracts";
+export const DEPLOY_ARTIFACTS_VERSION = "prod-verifiers-v1";
 
 const sharedDemoContracts = {
   standalone: {
@@ -46,16 +47,23 @@ export function readStoredDemoContracts() {
       return {};
     }
 
-    const parsed = JSON.parse(raw) as Partial<
-      Record<
-        DemoPreset,
-        {
-          label?: string;
-          contractAddress?: string;
-          tokenAddress?: string;
-        }
-      >
-    >;
+    const parsed = JSON.parse(raw) as {
+      version?: string;
+      standalone?: {
+        label?: string;
+        contractAddress?: string;
+        tokenAddress?: string;
+      };
+      converter?: {
+        label?: string;
+        contractAddress?: string;
+        tokenAddress?: string;
+      };
+    };
+
+    if (parsed.version !== DEPLOY_ARTIFACTS_VERSION) {
+      return {};
+    }
 
     const next: Partial<
       Record<

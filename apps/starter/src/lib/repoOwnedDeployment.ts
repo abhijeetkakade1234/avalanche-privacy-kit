@@ -1,6 +1,9 @@
 import type { Abi, Address, Hex } from "viem";
 import { avalancheFuji } from "wagmi/chains";
-import { LOCAL_DEMO_CONTRACTS_STORAGE_KEY } from "./demoContracts";
+import {
+  DEPLOY_ARTIFACTS_VERSION,
+  LOCAL_DEMO_CONTRACTS_STORAGE_KEY,
+} from "./demoContracts";
 
 type Artifact = {
   abi: Abi;
@@ -296,6 +299,7 @@ export async function deployRepoOwnedFujiStack({
   window.localStorage.setItem(
     LOCAL_DEMO_CONTRACTS_STORAGE_KEY,
     JSON.stringify({
+      version: DEPLOY_ARTIFACTS_VERSION,
       standalone: {
         label: "Repo-owned Fuji standalone deployment",
         contractAddress: standalone,
