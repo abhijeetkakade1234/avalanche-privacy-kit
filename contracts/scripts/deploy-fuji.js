@@ -100,33 +100,9 @@ async function main() {
 
   const repoRoot = path.resolve(__dirname, "..", "..");
   const outputPath = path.join(repoRoot, "output", "fuji-deployment.json");
-  const appConfigPath = path.join(
-    repoRoot,
-    "apps",
-    "starter",
-    "src",
-    "lib",
-    "localDemoContracts.ts",
-  );
-  const envLocalPath = path.join(repoRoot, "apps", "starter", ".env.local");
 
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, `${JSON.stringify(deployment, null, 2)}\n`);
-  fs.writeFileSync(
-    appConfigPath,
-    `export const localDemoContracts = {
-  standalone: {
-    label: "Repo-owned Fuji standalone deployment",
-    contractAddress: "${deployment.standalone}",
-  },
-  converter: {
-    label: "Repo-owned Fuji converter deployment",
-    contractAddress: "${deployment.converter}",
-    tokenAddress: "${deployment.demoToken}",
-  },
-};\n`,
-  );
-  fs.writeFileSync(envLocalPath, "VITE_EERC_PRESET=standalone\n");
 
   console.table(deployment);
 }
