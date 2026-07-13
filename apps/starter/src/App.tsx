@@ -38,6 +38,7 @@ type PublicTokenState = {
   balance?: bigint;
   allowance?: bigint;
   decimals?: number;
+  symbol?: string;
 };
 
 const docsUrl =
@@ -829,7 +830,7 @@ function PrivacyWorkbench({
   );
 
   const balance = eerc.useEncryptedBalance(config.tokenAddress);
-  const publicTokenSymbol = config.preset === "converter" ? "TEST" : undefined;
+  const publicTokenSymbol = publicTokenState.symbol ?? "token";
   const privateBalanceDecimals = Number(balance.decimals ?? 0n);
   const isOwner =
     Boolean(walletAddress && ownerAddress) &&
@@ -859,7 +860,7 @@ function PrivacyWorkbench({
 
     const loadPublicTokenState = async () => {
       try {
-        const [nextBalance, nextAllowance, nextDecimals] = await Promise.all([
+        const [nextBalance, nextAllowance, nextDecimals, nextSymbol] = await Promise.all([
           publicClient.readContract({
             address: config.tokenAddress!,
             abi: erc20ReadOnlyAbi,
@@ -877,6 +878,11 @@ function PrivacyWorkbench({
             abi: erc20ReadOnlyAbi,
             functionName: "decimals",
           }),
+          publicClient.readContract({
+            address: config.tokenAddress!,
+            abi: erc20ReadOnlyAbi,
+            functionName: "symbol",
+          }),
         ]);
 
         if (!cancelled) {
@@ -884,6 +890,7 @@ function PrivacyWorkbench({
             balance: nextBalance,
             allowance: nextAllowance,
             decimals: Number(nextDecimals),
+            symbol: nextSymbol,
           });
         }
       } catch {
@@ -1307,7 +1314,7 @@ function PrivacyWorkbench({
           <p className="muted">
             {isStandaloneOwner
               ? "Standalone mode skips public token deposit and mints directly into your private balance."
-              : "This shared Fuji standalone preset only lets the contract owner mint. Use it for registered balance and transfer testing, or deploy your own standalone contract to own minting."}
+              : "Standalone minting is owner-only. Connect the deployer wallet, or use converter mode with public demo tokens."}
           </p>
         </div>
       ) : null}
