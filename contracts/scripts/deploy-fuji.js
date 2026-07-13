@@ -14,7 +14,13 @@ async function deploy(name, args = [], options = {}) {
 async function main() {
   const privateKey = process.env.FUJI_PRIVATE_KEY || process.env.PRIVATE_KEY;
   if (!privateKey) {
-    throw new Error("Missing FUJI_PRIVATE_KEY or PRIVATE_KEY for Fuji deployment.");
+    throw new Error(
+      [
+        "Missing FUJI_PRIVATE_KEY or PRIVATE_KEY for Fuji deployment.",
+        "Copy contracts/.env.example to contracts/.env, then set FUJI_PRIVATE_KEY to a Fuji-funded deployer wallet.",
+        "That wallet becomes the owner of the standalone and converter eERC contracts.",
+      ].join("\n"),
+    );
   }
 
   const [deployer] = await hre.ethers.getSigners();
