@@ -43,6 +43,7 @@ Useful commands:
 
 - `pnpm install`
 - `pnpm deploy:fuji`
+- `pnpm apply:fuji`
 - `pnpm eerc:assets`
 - `pnpm verify:fuji`
 - `pnpm dev`
@@ -63,6 +64,6 @@ If you want a self-contained setup instead of shared demo infrastructure:
 
 The browser `Deploy repo-owned Fuji stack` action uses the same prod verifier artifacts staged under `apps/starter/public/deploy-artifacts`. If registration returns `InvalidProof()`, reset the browser deployment and redeploy once so the registrar points at the current prod registration verifier.
 
-For browser deployments, click `Copy verify JSON`, save it as `output/fuji-deployment.json`, then run `pnpm verify:fuji` to check the same repo-owned wiring from the terminal.
+For browser deployments, click `Copy verify JSON`, save it as `output/fuji-deployment.json`, then run `pnpm apply:fuji` and `pnpm verify:fuji` to use and check the same repo-owned wiring from the terminal.
 
 After a fresh deployment, the contract owner must register the wallet privacy key and click `Set contract auditor` once in the starter UI. That reuses the registered wallet as the contract auditor so private mint, deposit, and transfer flows can run.

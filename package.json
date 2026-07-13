@@ -6,6 +6,7 @@
     "dev": "pnpm --filter @avalanche-privacy-kit/starter dev",
     "build": "pnpm --filter @avalanche-privacy-kit/starter build",
     "eerc:assets": "node scripts/fetch-eerc-assets.mjs",
+    "apply:fuji": "node scripts/apply-fuji-deployment.mjs",
     "verify:eerc-assets": "node scripts/verify-eerc-assets.mjs",
     "verify:fuji": "pnpm --filter @avalanche-privacy-kit/starter exec node scripts/verify-fuji-demo.mjs",
     "deploy:fuji": "pnpm --filter @avalanche-privacy-kit/contracts deploy:fuji && pnpm eerc:assets && pnpm verify:eerc-assets && pnpm verify:fuji"
