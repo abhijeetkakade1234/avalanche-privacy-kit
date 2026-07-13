@@ -19,6 +19,7 @@ A developer should be able to:
 ```bash
 pnpm install
 pnpm eerc:assets
+pnpm deploy:fuji
 pnpm verify:fuji
 pnpm dev
 pnpm build
@@ -27,8 +28,8 @@ pnpm build
 Root commands:
 
 - `pnpm eerc:assets` copies the verified eERC circuit artifacts into the starter's public folder
-- `pnpm verify:fuji` checks the verified Fuji sample contracts over JSON-RPC
 - `pnpm deploy:fuji` deploys repo-owned Fuji contracts and writes the starter addresses
+- `pnpm verify:fuji` checks the repo-owned Fuji deployment from `output/fuji-deployment.json`
 - `pnpm dev` runs the starter app
 - `pnpm build` builds the starter app for production
 
@@ -58,7 +59,7 @@ The current starter is intentionally honest about the remaining integration requ
 - the current official `@avalabs/eerc-sdk` hook is wired in
 - the official circuit assets can be staged locally with `pnpm eerc:assets`
 - repo-owned deployments use the snarkJS prod verifier contracts that match those proof assets
-- the sample Fuji contracts can be checked with `pnpm verify:fuji`
+- the repo-owned Fuji contracts can be checked with `pnpm verify:fuji`
 - the starter can boot against a verified Fuji sample contract without extra env vars
 - the starter can switch between verified sample presets at runtime
 - custom deployments still use `VITE_EERC_CONTRACT_ADDRESS`, plus token address for converter mode

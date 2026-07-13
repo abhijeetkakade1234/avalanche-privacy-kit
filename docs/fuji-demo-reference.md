@@ -22,10 +22,11 @@ These addresses come from the AvaCloud-linked example app `BeratOz01/3dent` and 
 For the current starter:
 
 1. run `pnpm eerc:assets`
-2. optionally run `pnpm verify:fuji`
-3. run `pnpm dev`
-4. use the in-app preset switcher for `standalone` or `converter`
-5. only create a local env file if you want custom addresses or want to force a preset from config
+2. run `pnpm deploy:fuji` for a repo-owned stack
+3. run `pnpm verify:fuji`
+4. run `pnpm dev`
+5. use the in-app preset switcher for `standalone` or `converter`
+6. only create a local env file if you want custom addresses or want to force a preset from config
 
 Optional env overrides:
 
@@ -35,10 +36,10 @@ Optional env overrides:
 
 ## Caveat
 
-These are reference deployments, not deployments owned by this repo.
+The shared sample contracts are reference deployments, not deployments owned by this repo.
 
-They are useful for integration testing and demo flows, but a proper event submission should still decide whether to rely on:
+They are useful for comparison, but `pnpm verify:fuji` proves the repo-owned deployment by default. To check the shared sample deliberately, run:
 
-- the shared example deployment
-- a fresh Fuji deployment for this project
-- both
+```bash
+pnpm --filter @avalanche-privacy-kit/starter exec node scripts/verify-fuji-demo.mjs --shared
+```

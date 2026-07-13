@@ -33,6 +33,8 @@ const erc20Abi = [
 function getPresets() {
   const repoRoot = path.resolve(process.cwd(), "..", "..");
   const deploymentPath = path.join(repoRoot, "output", "fuji-deployment.json");
+  const allowSharedSample =
+    process.argv.includes("--shared") || process.env.ALLOW_SHARED_FUJI_SAMPLE === "1";
 
   if (existsSync(deploymentPath)) {
     const deployment = JSON.parse(readFileSync(deploymentPath, "utf8"));
@@ -50,6 +52,12 @@ function getPresets() {
         deployer: deployment.deployer,
       },
     ];
+  }
+
+  if (!allowSharedSample) {
+    throw new Error(
+      "No repo-owned Fuji deployment found. Run `pnpm deploy:fuji`, or pass `--shared` only when intentionally checking Ava Labs sample contracts.",
+    );
   }
 
   return [

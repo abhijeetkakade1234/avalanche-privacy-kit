@@ -59,6 +59,8 @@ If you want a self-contained setup instead of shared demo infrastructure:
 
 `pnpm deploy:fuji` deploys the snarkJS prod verifier contracts, registrar, standalone eERC, converter eERC, and demo ERC20, then writes the new addresses into [apps/starter/src/lib/localDemoContracts.ts](D:/avalanche-privacy-kit/apps/starter/src/lib/localDemoContracts.ts) and refreshes the starter proof assets from [contracts/assets](D:/avalanche-privacy-kit/contracts/assets).
 
+`pnpm verify:fuji` now verifies `output/fuji-deployment.json` by default. Use `pnpm --filter @avalanche-privacy-kit/starter exec node scripts/verify-fuji-demo.mjs --shared` only when intentionally checking Ava Labs' shared sample contracts.
+
 The browser `Deploy repo-owned Fuji stack` action uses the same prod verifier artifacts staged under `apps/starter/public/deploy-artifacts`. If registration returns `InvalidProof()`, reset the browser deployment and redeploy once so the registrar points at the current prod registration verifier.
 
 After a fresh deployment, the contract owner must register the wallet privacy key and click `Set contract auditor` once in the starter UI. That reuses the registered wallet as the contract auditor so private mint, deposit, and transfer flows can run.
