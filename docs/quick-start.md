@@ -59,8 +59,7 @@ The current starter is intentionally honest about the remaining integration requ
 - the official circuit assets can be staged locally with `pnpm eerc:assets`
 - repo-owned deployments use the snarkJS prod verifier contracts that match those proof assets
 - the repo-owned Fuji contracts can be checked with `pnpm verify:fuji`
-- the starter can boot against a verified Fuji sample contract without extra env vars
-- the starter can switch between verified sample presets at runtime
+- shared Fuji sample presets remain available for comparison only
 - custom deployments still use `VITE_EERC_CONTRACT_ADDRESS`, plus token address for converter mode
 
 Required env areas:
