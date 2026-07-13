@@ -43,6 +43,9 @@ function getPresets() {
         preset: "standalone",
         source: "repo-owned deployment",
         contractAddress: deployment.standalone,
+        deployer: deployment.deployer,
+        expectedIsConverter: false,
+        expectedRegistrar: deployment.registrar,
       },
       {
         preset: "converter",
@@ -50,6 +53,10 @@ function getPresets() {
         contractAddress: deployment.converter,
         tokenAddress: deployment.demoToken,
         deployer: deployment.deployer,
+        expectedIsConverter: true,
+        expectedRegistrar: deployment.registrar,
+        expectedTokenSymbol: "DMT",
+        expectedTokenDecimals: 18,
       },
     ];
   }
@@ -103,6 +110,30 @@ for (const preset of getPresets()) {
     auditorPublicKey: auditorPublicKey.map((value) => value.toString()),
   };
 
+  if (
+    preset.expectedRegistrar &&
+    registrar.toLowerCase() !== preset.expectedRegistrar.toLowerCase()
+  ) {
+    throw new Error(
+      `${preset.preset} registrar mismatch: expected ${preset.expectedRegistrar}, got ${registrar}`,
+    );
+  }
+
+  if (
+    preset.expectedIsConverter !== undefined &&
+    isConverter !== preset.expectedIsConverter
+  ) {
+    throw new Error(
+      `${preset.preset} mode mismatch: expected converter=${preset.expectedIsConverter}, got ${isConverter}`,
+    );
+  }
+
+  if (preset.deployer && owner.toLowerCase() !== preset.deployer.toLowerCase()) {
+    throw new Error(
+      `${preset.preset} owner mismatch: expected ${preset.deployer}, got ${owner}`,
+    );
+  }
+
   if (preset.tokenAddress) {
     const [tokenName, tokenSymbol, tokenDecimals] = await Promise.all([
       client.readContract({ address: preset.tokenAddress, abi: erc20Abi, functionName: "name" }),
@@ -114,6 +145,21 @@ for (const preset of getPresets()) {
     result.tokenSymbol = tokenSymbol;
     result.tokenDecimals = Number(tokenDecimals);
 
+    if (preset.expectedTokenSymbol && tokenSymbol !== preset.expectedTokenSymbol) {
+      throw new Error(
+        `${preset.preset} token symbol mismatch: expected ${preset.expectedTokenSymbol}, got ${tokenSymbol}`,
+      );
+    }
+
+    if (
+      preset.expectedTokenDecimals !== undefined &&
+      Number(tokenDecimals) !== preset.expectedTokenDecimals
+    ) {
+      throw new Error(
+        `${preset.preset} token decimals mismatch: expected ${preset.expectedTokenDecimals}, got ${Number(tokenDecimals)}`,
+      );
+    }
+
     if (preset.deployer) {
       const deployerBalance = await client.readContract({
         address: preset.tokenAddress,
@@ -123,6 +169,9 @@ for (const preset of getPresets()) {
       });
       result.deployer = preset.deployer;
       result.deployerTokenBalance = deployerBalance.toString();
+      if (deployerBalance <= 0n) {
+        throw new Error(`${preset.preset} deployer has no demo token balance`);
+      }
     }
   }
 
