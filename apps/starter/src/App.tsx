@@ -18,6 +18,7 @@ import {
 import { getStarterConfig, type StarterConfig } from "./lib/config";
 import {
   demoContracts,
+  LOCAL_FUJI_DEPLOYMENT_STORAGE_KEY,
   readStoredDemoContracts,
   type DemoPreset,
 } from "./lib/demoContracts";
@@ -227,17 +228,21 @@ function App() {
   };
 
   const handleCopyStoredDeployment = async () => {
-    if (!activeStoredPreset) {
+    const storedDeployment = window.localStorage.getItem(
+      LOCAL_FUJI_DEPLOYMENT_STORAGE_KEY,
+    );
+    if (!activeStoredPreset && !storedDeployment) {
       return;
     }
 
     try {
       await navigator.clipboard.writeText(
-        stringifyWithBigints({
-          [selectedPreset]: activeStoredPreset,
-        }),
+        storedDeployment ??
+          stringifyWithBigints({
+            [selectedPreset]: activeStoredPreset,
+          }),
       );
-      setCopyStatus("Copied current browser deployment JSON.");
+      setCopyStatus("Copied fuji-deployment.json content.");
     } catch (caught) {
       setCopyStatus(
         caught instanceof Error ? caught.message : "Copy failed",
@@ -281,6 +286,7 @@ ${entries.join("\n")}
 
   const handleResetStoredDeployment = () => {
     window.localStorage.removeItem("apk.localDemoContracts");
+    window.localStorage.removeItem(LOCAL_FUJI_DEPLOYMENT_STORAGE_KEY);
     window.location.reload();
   };
 
@@ -603,7 +609,7 @@ ${entries.join("\n")}
                       className="button button-ghost"
                       onClick={() => void handleCopyStoredDeployment()}
                     >
-                      Copy deployment JSON
+                      Copy verify JSON
                     </button>
                     <button
                       className="button button-ghost"

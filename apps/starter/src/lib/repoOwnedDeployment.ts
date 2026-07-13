@@ -3,6 +3,7 @@ import { avalancheFuji } from "wagmi/chains";
 import {
   DEPLOY_ARTIFACTS_VERSION,
   LOCAL_DEMO_CONTRACTS_STORAGE_KEY,
+  LOCAL_FUJI_DEPLOYMENT_STORAGE_KEY,
 } from "./demoContracts";
 
 type Artifact = {
@@ -12,7 +13,16 @@ type Artifact = {
 };
 
 type Deployment = {
+  network: "fuji";
+  chainId: number;
   deployer: Address;
+  registrationVerifier: Address;
+  mintVerifier: Address;
+  withdrawVerifier: Address;
+  transferVerifier: Address;
+  burnVerifier: Address;
+  babyJubJub: Address;
+  registrar: Address;
   standalone: Address;
   converter: Address;
   demoToken: Address;
@@ -290,11 +300,20 @@ export async function deployRepoOwnedFujiStack({
   });
 
   const deployment = {
+    network: "fuji",
+    chainId: avalancheFuji.id,
     deployer: account,
+    registrationVerifier,
+    mintVerifier,
+    withdrawVerifier,
+    transferVerifier,
+    burnVerifier,
+    babyJubJub,
+    registrar,
     standalone,
     converter,
     demoToken,
-  };
+  } satisfies Deployment;
 
   window.localStorage.setItem(
     LOCAL_DEMO_CONTRACTS_STORAGE_KEY,
@@ -310,6 +329,10 @@ export async function deployRepoOwnedFujiStack({
         tokenAddress: demoToken,
       },
     }),
+  );
+  window.localStorage.setItem(
+    LOCAL_FUJI_DEPLOYMENT_STORAGE_KEY,
+    JSON.stringify(deployment),
   );
 
   onStatus?.("Deployment complete");

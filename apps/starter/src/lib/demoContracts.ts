@@ -3,6 +3,7 @@ import { localDemoContracts } from "./localDemoContracts";
 
 export type DemoPreset = "standalone" | "converter";
 export const LOCAL_DEMO_CONTRACTS_STORAGE_KEY = "apk.localDemoContracts";
+export const LOCAL_FUJI_DEPLOYMENT_STORAGE_KEY = "apk.fujiDeployment";
 export const DEPLOY_ARTIFACTS_VERSION = "prod-verifiers-v1";
 
 const sharedDemoContracts = {
