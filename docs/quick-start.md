@@ -20,6 +20,7 @@ A developer should be able to:
 pnpm install
 pnpm eerc:assets
 pnpm deploy:fuji
+pnpm prove:fuji-flow
 pnpm dev
 pnpm build
 ```
@@ -30,6 +31,7 @@ Root commands:
 - `pnpm apply:fuji` applies `output/fuji-deployment.json` to the starter config
 - `pnpm deploy:fuji` deploys repo-owned Fuji contracts, writes the starter addresses, stages assets, and verifies the deployment
 - `pnpm verify:fuji` rechecks `output/fuji-deployment.json` when present, otherwise it verifies the committed repo-owned starter config
+- `pnpm prove:fuji-flow` proves a real repo-owned standalone privacy flow from `contracts/.env`
 - `pnpm dev` runs the starter app
 - `pnpm build` builds the starter app for production
 
@@ -90,3 +92,5 @@ Fresh deployments require one owner setup flow in the starter:
 1. Register the wallet privacy key.
 2. Set the contract auditor.
 3. Mint private balance in standalone mode, or approve and deposit the demo ERC20 in converter mode.
+
+Terminal proof path: run `pnpm prove:fuji-flow` after `pnpm deploy:fuji`. It registers or recovers the wallet privacy key, sets the auditor if needed, private mints, and sends a private transfer to self on Fuji.
