@@ -20,7 +20,6 @@ A developer should be able to:
 pnpm install
 pnpm eerc:assets
 pnpm deploy:fuji
-pnpm verify:fuji
 pnpm dev
 pnpm build
 ```
@@ -28,8 +27,8 @@ pnpm build
 Root commands:
 
 - `pnpm eerc:assets` copies the verified eERC circuit artifacts into the starter's public folder
-- `pnpm deploy:fuji` deploys repo-owned Fuji contracts and writes the starter addresses
-- `pnpm verify:fuji` checks the repo-owned Fuji deployment from `output/fuji-deployment.json`
+- `pnpm deploy:fuji` deploys repo-owned Fuji contracts, writes the starter addresses, stages assets, and verifies the deployment
+- `pnpm verify:fuji` rechecks the repo-owned Fuji deployment from `output/fuji-deployment.json`
 - `pnpm dev` runs the starter app
 - `pnpm build` builds the starter app for production
 
